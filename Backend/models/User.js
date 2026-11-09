@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -25,8 +26,8 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: {
-        values: ['analyst', 'admin'],
-        message: '{VALUE} is not a valid role. Allowed roles are: analyst, admin',
+        values: ['admin', 'analyst', 'organization_member', 'moderator'],
+        message: '{VALUE} is not a valid role',
       },
       default: 'analyst',
     },
@@ -36,7 +37,6 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving to ensure plain-text passwords are never stored
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -47,12 +47,10 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Instance method to verify password during login
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Omit sensitive password field when converting document to JSON
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;

@@ -110,6 +110,9 @@ export const AuthProvider = ({ children }) => {
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
+        isModerator: user?.role === 'moderator',
+        isAnalyst: user?.role === 'analyst',
+        isOrganizationMember: user?.role === 'organization_member',
       }}
     >
       {children}

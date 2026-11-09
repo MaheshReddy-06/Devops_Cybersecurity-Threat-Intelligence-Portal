@@ -16,7 +16,8 @@ import Badge from '../components/Badge';
 import Modal from '../components/Modal';
 
 export default function ModerationPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isModerator } = useAuth();
+  const canModerate = isAdmin || isModerator;
 
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'reviewed'
   const [threats, setThreats] = useState([]);
@@ -41,12 +42,12 @@ export default function ModerationPage() {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canModerate) {
       fetchThreats();
     } else {
       setLoading(false);
     }
-  }, [activeTab, page, isAdmin]);
+  }, [activeTab, page, canModerate]);
 
   const fetchThreats = async () => {
     setLoading(true);
@@ -101,9 +102,8 @@ export default function ModerationPage() {
 
       setFeedback({
         type: 'success',
-        message: `Threat indicator '${threat.indicatorValue}' successfully ${
-          action === 'approve' ? 'approved and published' : 'rejected'
-        }.`,
+        message: `Threat indicator '${threat.indicatorValue}' successfully ${action === 'approve' ? 'approved and published' : 'rejected'
+          }.`,
       });
 
       setDecisionModal({
@@ -126,16 +126,18 @@ export default function ModerationPage() {
   };
 
   // Role Gate: Explain Admin requirement
-  if (!isAdmin) {
+  if (!canModerate) {
     return (
       <div className="moderation-guard-card">
         <div className="guard-icon">
           <ShieldAlert size={48} color="var(--color-threat-high)" />
         </div>
-        <h2>Administrator Role Required</h2>
+        <h2>Moderator or Administrator Role Required</h2>
         <p>
-          The Review and Moderation console is reserved for verified security administrators. Ordinary analysts
-          can submit indicators and explore published intelligence, but cannot triage or moderate submissions.
+          The Review and Moderation console is reserved for authorized
+          security moderators and administrators. Threat analysts can
+          submit indicators and explore published intelligence, but
+          cannot review or moderate submissions.
         </p>
         <div className="guard-account-box">
           <p>
@@ -436,8 +438,8 @@ export default function ModerationPage() {
                 {decisionModal.isSubmitting
                   ? 'Processing...'
                   : decisionModal.action === 'approve'
-                  ? 'Confirm Approval'
-                  : 'Confirm Rejection'}
+                    ? 'Confirm Approval'
+                    : 'Confirm Rejection'}
               </button>
             </div>
           }

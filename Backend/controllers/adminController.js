@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Threat = require('../models/Threat');
 const Activity = require('../models/Activity');
+const User = require('../models/User');
 
 /**
  * @desc    Retrieve all pending threat submissions awaiting administrator review
@@ -280,6 +281,125 @@ const rejectThreat = async (req, res) => {
     });
   }
 };
+/**
+ * @desc    Get all registered users
+ * @route   GET /api/admin/users
+ * @access  Admin
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error('[Admin] Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve users',
+    });
+  }
+};
+/**
+ * @desc    Update a user's role
+ * @route   PUT /api/admin/users/:id/role
+ * @access  Admin
+ */
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const allowedRoles = [
+      'admin',
+      'analyst',
+      'moderator',
+      'organization_member',
+    ];
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID',
+      });
+    }
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role selected',
+      });
+    }
+
+    const targetUser = await User.findById(id);
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (targetUser.role === role) {
+      return res.status(200).json({
+        success: true,
+        message: 'User already has this role',
+        user: {
+          _id: targetUser._id,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role,
+        },
+      });
+    }
+
+    // Prevent removal of the last administrator.
+    if (targetUser.role === 'admin' && role !== 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot change the role of the last administrator',
+        });
+      }
+    }
+
+    const previousRole = targetUser.role;
+
+    targetUser.role = role;
+    await targetUser.save();
+
+    await Activity.create({
+      user: req.user._id,
+      threat: null,
+      action: 'UPDATE_USER_ROLE',
+      description: `Changed ${targetUser.email} role from ${previousRole} to ${role}`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User role updated successfully',
+      user: {
+        _id: targetUser._id,
+        name: targetUser.name,
+        email: targetUser.email,
+        role: targetUser.role,
+      },
+    });
+  } catch (error) {
+    console.error('[Admin] Update user role error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user role',
+    });
+  }
+};
 
 module.exports = {
   getPendingThreats,
@@ -287,4 +407,6 @@ module.exports = {
   getAdminThreatById,
   approveThreat,
   rejectThreat,
+  getAllUsers,
+  updateUserRole,
 };
