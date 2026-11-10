@@ -1,4 +1,4 @@
-# Cybersecurity Threat Intelligence Sharing Portal
+# Cybersecurity Threat Intelligence Sharing Portal Using MERN Stack
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![Tests](https://img.shields.io/badge/tests-43%2F43%20passed-success.svg)]()
